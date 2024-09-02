@@ -1,0 +1,13 @@
+{
+    "name": "webgl-app",
+    "version": "1.0.0",
+    "description": "A simple WebGL application",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "vite": "^5.4.2"
+    }
+}
