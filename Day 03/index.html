@@ -35,88 +35,95 @@
         let xPos = 0.0, yPos = 0.0;
         let xVel = 0.01, yVel = 0.008;  // Different speeds for a more interesting bounce
 
-        // Create the vertex shader
-        const vertexShaderSource = `
-            attribute vec4 a_position;
-            varying vec2 posColor;
-            void main() {
-                posColor = a_position.xy;
-                gl_PointSize = 5.0;
-                gl_Position = a_position;
+        // Function to load shader source from file
+        async function loadShaderSource(url) {
+            const response = await fetch(url);
+            return response.text();
+        }
+
+        // Function to create and compile shader
+        async function createShader(gl, type, url) {
+            const source = await loadShaderSource(url);
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
             }
-        `;
-        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertexShader, vertexShaderSource);
-        gl.compileShader(vertexShader);
+            return shader;
+        }
 
-        // Create the fragment shader
-        const fragmentShaderSource = `
-            precision mediump float;
-            varying vec2 posColor;
-            void main() {
-                gl_FragColor = vec4(abs(posColor.x), abs(posColor.y), 0.6, 1);
+        // Initialize shaders and start animation
+        async function init() {
+            const vertexShader = await createShader(gl, gl.VERTEX_SHADER, 'vertexShader.glsl');
+            const fragmentShader = await createShader(gl, gl.FRAGMENT_SHADER, 'fragmentShader.glsl');
+
+            // Create the shader program
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(program));
+                return;
             }
-        `;
-        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
-        gl.compileShader(fragmentShader);
+            gl.useProgram(program);
 
-        // Create the shader program
-        const program = gl.createProgram();
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
+            // Create buffer for square vertices
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-        // Create buffer for square vertices
-        const positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            // Function to update the square's position
+            function updateSquarePosition() {
+                const size = 0.2; // Half of square size
+                const positions = [
+                    xPos - size, yPos - size,
+                    xPos + size, yPos - size,
+                    xPos + size, yPos + size,
+                    xPos - size, yPos + size
+                ];
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            }
 
-        // Function to update the square's position
-        function updateSquarePosition() {
-            const size = 0.2; // Half of square size
-            const positions = [
-                xPos - size, yPos - size,
-                xPos + size, yPos - size,
-                xPos + size, yPos + size,
-                xPos - size, yPos + size
-            ];
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            // Get attribute location and enable it
+            const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
+            gl.enableVertexAttribArray(positionAttributeLocation);
+            gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+            // Clear the canvas and draw the square
+            function drawSquare() {
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+            }
+
+            // Animation loop
+            function animate() {
+                // Update position
+                xPos += xVel;
+                yPos += yVel;
+
+                // Bounce off the boundaries
+                if (xPos + 0.2 > 1 || xPos - 0.2 < -1) xVel = -xVel;
+                if (yPos + 0.2 > 1 || yPos - 0.2 < -1) yVel = -yVel;
+
+                // Update the square position in the buffer
+                updateSquarePosition();
+
+                // Redraw the square
+                drawSquare();
+
+                // Call the next frame
+                requestAnimationFrame(animate);
+            }
+
+            // Start the animation
+            animate(); // Start animation loop
         }
 
-        // Get attribute location and enable it
-        const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
-        gl.enableVertexAttribArray(positionAttributeLocation);
-        gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-
-        // Clear the canvas and draw the square
-        function drawSquare() {
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
-        }
-
-        // Animation loop
-        function animate() {
-            // Update position
-            xPos += xVel;
-            yPos += yVel;
-
-            // Bounce off the boundaries
-            if (xPos + 0.2 > 1 || xPos - 0.2 < -1) xVel = -xVel;
-            if (yPos + 0.2 > 1 || yPos - 0.2 < -1) yVel = -yVel;
-
-            // Update the square position in the buffer
-            updateSquarePosition();
-
-            // Redraw the square
-            drawSquare();
-
-            // Call the next frame
-            requestAnimationFrame(animate);
-        }
-
-        // Start the animation
-        animate(); // Start animation loop
+        // Start initialization
+        init();
     </script>
 </body>
 </html>
