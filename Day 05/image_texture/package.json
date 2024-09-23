@@ -1,0 +1,12 @@
+{
+    "name": "webgl-project",
+    "version": "1.0.0",
+    "description": "A project that uses WebGL",
+    "main": "index.html",
+    "scripts": {
+        "start": "http-server"
+    },
+    "devDependencies": {
+        "http-server": "^0.12.3"
+    }
+}
